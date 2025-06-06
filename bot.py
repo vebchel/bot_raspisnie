@@ -4,9 +4,10 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.enums import ParseMode
 
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -23,7 +24,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Инициализация бота и диспетчера
-bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=config.BOT_TOKEN, parse_mode=ParseMode.HTML)
+#bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
 

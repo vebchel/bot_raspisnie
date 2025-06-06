@@ -1,0 +1,4 @@
+aiogram==3.20
+beautifulsoup4
+requests
+python-dotenv

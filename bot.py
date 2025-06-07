@@ -1,5 +1,3 @@
-# bot.py
-# bot.py
 import asyncio
 import logging
 import re
@@ -25,27 +23,9 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-            # ...
-
 # Инициализация бота и диспетчера
 bot = Bot(token=config.BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
-
-@dp.message(CommandStart())
-async def command_start_handler(message: types.Message):
-            """Обрабатывает команду /start."""
-            logger.info(f"Получена команда /start от пользователя {message.chat.id}") 
-
-@app.post("/webhook")
-async def bot_webhook():
-        """Обрабатывает входящие запросы от Telegram (aiogram)."""
-        logger.info("Получен запрос на /webhook")  # Добавьте эту строку
-        json_data = request.get_data().decode('utf-8')
-        update = types.Update.model_validate_json(json_data)
-        await dp.process_update(update)
-        return "OK", 200
-
 
 # Определение состояний для FSM (Finite State Machine)
 class RegStates(StatesGroup):
@@ -54,9 +34,6 @@ class RegStates(StatesGroup):
     surname = State()
     group = State()
     schedule_time = State()
-
-
-    
 
 # --- ФУНКЦИЯ ДЛЯ СОЗДАНИЯ КЛАВИАТУРЫ ---
 def create_keyboard():
@@ -378,6 +355,7 @@ def health_check():
 @app.post("/webhook")
 async def bot_webhook():
     """Обрабатывает входящие запросы от Telegram (aiogram)."""
+    logger.info("Получен запрос на /webhook")  # Добавьте эту строку
     json_data = request.get_data().decode('utf-8')
     update = types.Update.model_validate_json(json_data)
     await dp.process_update(update)  # Передаем update в диспетчер aiogram
@@ -413,9 +391,6 @@ async def main():
     except Exception as e:
         logger.error(f"Error in main loop: {e}")
 
-if __name__ == '__main__':
-        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-    
 if __name__ == "__main__":
     try:
         asyncio.run(main())

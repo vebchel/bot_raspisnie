@@ -37,6 +37,9 @@ class RegStates(StatesGroup):
     group = State()
     schedule_time = State()
 
+
+    
+
 # --- ФУНКЦИЯ ДЛЯ СОЗДАНИЯ КЛАВИАТУРЫ ---
 def create_keyboard():
     """Создает клавиатуру с кнопками."""
@@ -58,6 +61,15 @@ def create_keyboard():
     return keyboard
 
 # --- ХЕНДЛЕРЫ ---
+@app.post("/webhook")
+async def bot_webhook():
+        """Обрабатывает входящие запросы от Telegram (aiogram)."""
+        logger.info("Получен запрос на /webhook")  # Добавьте эту строку
+        json_data = request.get_data().decode('utf-8')
+        update = types.Update.model_validate_json(json_data)
+        await dp.process_update(update)
+        return "OK", 200
+
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message, state: FSMContext) -> None:
     """Обрабатывает команду /start."""

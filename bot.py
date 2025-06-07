@@ -19,6 +19,8 @@ import schedule_fetcher
 from flask import Flask, request
 import os
 
+app = Flask(__name__)
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -354,9 +356,10 @@ def health_check():
 
 @app.post("/webhook")
 async def bot_webhook():
+    """Обрабатывает входящие запросы от Telegram (aiogram)."""
     json_data = request.get_data().decode('utf-8')
     update = types.Update.model_validate_json(json_data)
-    await dp.process_update(update)
+    await dp.process_update(update)  # Передаем update в диспетчер aiogram
     return "OK", 200
 
 
@@ -374,13 +377,24 @@ async def main():
     # Запускаем поллинг бота
     #await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Бот запущен! 🚀")
-    await bot.set_webhook(f"{webhook_url}{webhook_path}")
+    try:
+        await bot.set_webhook(f"{webhook_url}{webhook_path}")
+        logger.info("Webhook set successfully")
+    except Exception as e:
+        logger.error(f"Error setting webhook: {e}")
+
     # Run tasks concurrently
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(dp.start_polling(bot))
-        tg.create_task(app.run(host="0.0.0.0", port=port)) # type: ignore
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(dp.start_polling(bot))
+            #Here we tell the Flask application to start.
+            tg.create_task(app.run(host="0.0.0.0", port=port)) # type: ignore
+    except Exception as e:
+        logger.error(f"Error in main loop: {e}")
 
-
+if __name__ == '__main__':
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    
 if __name__ == "__main__":
     try:
         asyncio.run(main())

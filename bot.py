@@ -25,9 +25,27 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+            # ...
+
 # Инициализация бота и диспетчера
 bot = Bot(token=config.BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def command_start_handler(message: types.Message):
+            """Обрабатывает команду /start."""
+            logger.info(f"Получена команда /start от пользователя {message.chat.id}") 
+
+@app.post("/webhook")
+async def bot_webhook():
+        """Обрабатывает входящие запросы от Telegram (aiogram)."""
+        logger.info("Получен запрос на /webhook")  # Добавьте эту строку
+        json_data = request.get_data().decode('utf-8')
+        update = types.Update.model_validate_json(json_data)
+        await dp.process_update(update)
+        return "OK", 200
+
 
 # Определение состояний для FSM (Finite State Machine)
 class RegStates(StatesGroup):
@@ -61,15 +79,6 @@ def create_keyboard():
     return keyboard
 
 # --- ХЕНДЛЕРЫ ---
-@app.post("/webhook")
-async def bot_webhook():
-        """Обрабатывает входящие запросы от Telegram (aiogram)."""
-        logger.info("Получен запрос на /webhook")  # Добавьте эту строку
-        json_data = request.get_data().decode('utf-8')
-        update = types.Update.model_validate_json(json_data)
-        await dp.process_update(update)
-        return "OK", 200
-
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message, state: FSMContext) -> None:
     """Обрабатывает команду /start."""

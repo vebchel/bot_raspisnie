@@ -371,16 +371,16 @@ async def main():
 
     # Get port from environment or use default
     port = int(os.environ.get("PORT", 8000))
-    webhook_url = os.environ.get("WEBHOOK_URL")
-    webhook_path = "/webhook"
+    #webhook_url = os.environ.get("WEBHOOK_URL")
+    #webhook_path = "/webhook"
     # Запускаем поллинг бота
     #await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Бот запущен! 🚀")
-    try:
-        await bot.set_webhook(f"{webhook_url}{webhook_path}")
-        logger.info("Webhook set successfully")
-    except Exception as e:
-        logger.error(f"Error setting webhook: {e}")
+    #try:
+        #await bot.set_webhook(f"{webhook_url}{webhook_path}")
+        #logger.info("Webhook set successfully")
+    #except Exception as e:
+        #logger.error(f"Error setting webhook: {e}")
 
     # Run tasks concurrently
     try:

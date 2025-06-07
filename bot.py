@@ -6,9 +6,6 @@ import re
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
-
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -19,15 +16,16 @@ import db
 import scheduler
 import schedule_fetcher
 
+from flask import Flask, request
+import os
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Инициализация бота и диспетчера
 bot = Bot(token=config.BOT_TOKEN, parse_mode=ParseMode.HTML)
-#bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
-
 
 # Определение состояний для FSM (Finite State Machine)
 class RegStates(StatesGroup):
@@ -36,7 +34,6 @@ class RegStates(StatesGroup):
     surname = State()
     group = State()
     schedule_time = State()
-
 
 # --- ФУНКЦИЯ ДЛЯ СОЗДАНИЯ КЛАВИАТУРЫ ---
 def create_keyboard():
@@ -58,9 +55,7 @@ def create_keyboard():
     ])
     return keyboard
 
-
 # --- ХЕНДЛЕРЫ ---
-
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message, state: FSMContext) -> None:
     """Обрабатывает команду /start."""
@@ -88,7 +83,6 @@ async def command_start_handler(message: types.Message, state: FSMContext) -> No
         await state.set_state(RegStates.name)
         logger.info(f"Пользователь {message.chat.id} начал регистрацию.")
 
-
 @dp.message(RegStates.name)
 async def reg_name(message: types.Message, state: FSMContext):
     """Ловит имя и спрашивает фамилию."""
@@ -100,7 +94,6 @@ async def reg_name(message: types.Message, state: FSMContext):
     await message.answer(f"Окей, {message.text.strip()}! Принято ✅\nТеперь напиши свою фамилию.", reply_markup=create_keyboard())
     await state.set_state(RegStates.surname)
 
-
 @dp.message(RegStates.surname)
 async def reg_surname(message: types.Message, state: FSMContext):
     """Ловит фамилию и спрашивает группу."""
@@ -111,7 +104,6 @@ async def reg_surname(message: types.Message, state: FSMContext):
     await state.update_data(surname=message.text.strip())
     await message.answer("Супер! 💪 Теперь напиши название своей группы (например, ИВТ-1, ПД-2 и т.д.).", reply_markup=create_keyboard())
     await state.set_state(RegStates.group)
-
 
 @dp.message(RegStates.group)
 async def reg_group(message: types.Message, state: FSMContext):
@@ -127,7 +119,6 @@ async def reg_group(message: types.Message, state: FSMContext):
         "⏰ Введи в формате ЧЧ:ММ (например, 08:30, 12:00).", reply_markup=create_keyboard()
     )
     await state.set_state(RegStates.schedule_time)
-
 
 @dp.message(RegStates.schedule_time)
 async def reg_schedule_time(message: types.Message, state: FSMContext):
@@ -184,7 +175,6 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
 
     await state.clear()  # Очищаем состояние FSM после завершения
 
-
 @dp.message(F.text == "/myinfo")
 async def show_my_info(message: types.Message):
     """Показывает информацию о зарегистрированном пользователе."""
@@ -203,7 +193,6 @@ async def show_my_info(message: types.Message):
     else:
         await message.answer("Ты еще не зарегистрирован! 😟 Используй команду /start чтобы начать.", reply_markup=keyboard)
 
-
 @dp.message(F.text == "/getschedule")
 async def get_schedule_now(message: types.Message):
     """Отправляет расписание для пользователя прямо сейчас."""
@@ -217,9 +206,7 @@ async def get_schedule_now(message: types.Message):
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
 
-
 # --- ХЕНДЛЕР ДЛЯ УДАЛЕНИЯ ПРОФИЛЯ ---
-
 @dp.message(F.text == "Удалить профиль 🗑️")
 async def delete_profile(message: types.Message):
     """Удаляет профиль пользователя из базы данных."""
@@ -234,7 +221,6 @@ async def delete_profile(message: types.Message):
         ]
     ])
     await message.answer("Ты уверен, что хочешь удалить свой профиль? 🥺 Все твои данные будут стерты, и тебе придется регистрироваться заново.", reply_markup=inline_keyboard)
-
 
 # Обработчик нажатий на кнопки подтверждения/отмены
 @dp.callback_query(F.data.in_({"confirm_delete", "cancel_delete"}))
@@ -255,14 +241,12 @@ async def delete_confirmation(callback: types.CallbackQuery, state: FSMContext):
 
     await callback.answer()  # Обязательно отвечаем на callback query, чтобы убрать "часики"
 
-
 # --- ХЕНДЛЕРЫ ДЛЯ КНОПОК ---
 @dp.message(F.text == "Регистрация 📝")
 async def registration_handler(message: types.Message, state: FSMContext):
     """Обрабатывает нажатие на кнопку "Регистрация"."""
     await message.answer("Чтобы зарегистрироваться, напиши свое имя:", reply_markup=create_keyboard())
     await state.set_state(RegStates.name)
-
 
 @dp.message(F.text == "Все расписание 📅")
 async def all_schedule_handler(message: types.Message):
@@ -278,7 +262,6 @@ async def all_schedule_handler(message: types.Message):
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
 
-
 @dp.message(F.text == "Расписание на сегодня 🗓️")
 async def today_schedule_handler(message: types.Message):
     """Обрабатывает нажатие на кнопку "Расписание на сегодня"."""
@@ -293,13 +276,11 @@ async def today_schedule_handler(message: types.Message):
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
 
-
 @dp.message(F.text == "Изменить время ⏰")
 async def change_time_handler(message: types.Message, state: FSMContext):
     """Обрабатывает нажатие на кнопку "Изменить время"."""
     await message.answer("Напиши время, в которое ты хочешь получать расписание (в формате ЧЧ:ММ):", reply_markup=create_keyboard())
     await state.set_state(RegStates.schedule_time)
-
 
 @dp.message(RegStates.schedule_time)
 async def reg_schedule_time(message: types.Message, state: FSMContext):
@@ -364,20 +345,44 @@ async def echo_handler(message: types.Message) -> None:
     except TypeError:
         await message.answer("Не могу это скопировать! 😅", reply_markup=create_keyboard())
 
+# --- Flask app ---
+app = Flask(__name__)
 
-# --- ГЛАВНАЯ ФУНКЦИЯ ЗАПУСКА ---
+@app.route("/")
+def health_check():
+    return "OK", 200
 
-async def main() -> None:
+@app.post("/webhook")
+async def bot_webhook():
+    json_data = request.get_data().decode('utf-8')
+    update = types.Update.model_validate_json(json_data)
+    await dp.process_update(update)
+    return "OK", 200
+
+
+# --- Main function ---
+async def main():
     # Инициализируем базу данных (если еще не инициализирована)
     db.init_db()
     # Инициализируем планировщик, передавая ему экземпляр бота
     scheduler.init_scheduler(bot)
 
+    # Get port from environment or use default
+    port = int(os.environ.get("PORT", 8000))
+    webhook_url = os.environ.get("WEBHOOK_URL")
+    webhook_path = "/webhook"
     # Запускаем поллинг бота
-    await bot.delete_webhook(drop_pending_updates=True)
+    #await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Бот запущен! 🚀")
-    await dp.start_polling(bot)
+    await bot.set_webhook(f"{webhook_url}{webhook_path}")
+    # Run tasks concurrently
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(dp.start_polling(bot))
+        tg.create_task(app.run(host="0.0.0.0", port=port)) # type: ignore
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot stopped!")

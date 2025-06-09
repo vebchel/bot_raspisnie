@@ -4,5 +4,6 @@ python-dotenv==1.0.0  # Замените на актуальную версию 
 requests==2.28.1  # Замените на актуальную версию (проверьте с помощью pip show requests)
 beautifulsoup4==4.12.2  # Замените на актуальную версию (проверьте с помощью pip show beautifulsoup4)
 apscheduler==3.10.4  # Замените на актуальную версию, совместимую с asyncio (проверьте с помощью pip show apscheduler)
+aiohttp==3.9.5
 #flask==3.0.0  # Замените на актуальную версию flask
 #gunicorn==23.0.0    

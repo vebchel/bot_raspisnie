@@ -14,10 +14,7 @@ import db
 import scheduler
 import schedule_fetcher
 
-from flask import Flask, request
 import os
-
-app = Flask(__name__)
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -60,9 +57,9 @@ def create_keyboard():
 async def command_start_handler(message: types.Message, state: FSMContext) -> None:
     """Обрабатывает команду /start."""
     user = db.get_user(message.chat.id)
-    keyboard = create_keyboard()  # Создаем клавиатуру
+    keyboard = create_keyboard() 
 
-    if user:
+if user:
         # Пользователь уже зарегистрирован
         await message.answer(
             f"Привет снова, {user[2]}! 👋\n"
@@ -72,7 +69,7 @@ async def command_start_handler(message: types.Message, state: FSMContext) -> No
             reply_markup=keyboard  # Отправляем клавиатуру
         )
         await state.clear()  # Убедимся, что состояние сброшено
-    else:
+else:
         # Новый пользователь, начинаем регистрацию
         await message.answer(
             f"Йоу, {message.from_user.full_name}! 👋 Я твой личный бот-помощник по расписанию в колледже! 🚀\n"
@@ -201,7 +198,7 @@ async def get_schedule_now(message: types.Message):
 
     if user:
         group = user[4]
-        schedule_text = schedule_fetcher.get_schedule(group)
+        schedule_text = await schedule_fetcher.get_schedule(group)
         await message.answer(f"Держи расписание на сейчас, {user[2]}! 👇\n{schedule_text}", reply_markup=keyboard)
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
@@ -257,7 +254,7 @@ async def all_schedule_handler(message: types.Message):
     if user:
         group = user[4]
         # Вызываем функцию get_week_schedule (расписание на неделю)
-        schedule_text = schedule_fetcher.get_week_schedule(group)  # <--- ЗАМЕНИЛИ!
+        schedule_text = await schedule_fetcher.get_week_schedule(group)  # <--- ЗАМЕНИЛИ!
         await message.answer(f"Расписание на неделю для группы {group}: 👇\n{schedule_text}", reply_markup=keyboard)
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
@@ -271,7 +268,7 @@ async def today_schedule_handler(message: types.Message):
     if user:
         group = user[4]
         # Вызываем функцию get_schedule (расписание только на сегодня)
-        schedule_text = schedule_fetcher.get_schedule(group)
+        schedule_text = await schedule_fetcher.get_schedule(group)
         await message.answer(f"Расписание на сегодня для группы {group}: 👇\n{schedule_text}", reply_markup=keyboard)
     else:
         await message.answer("Чтобы получить расписание, нужно сначала зарегистрироваться! ☝️ Используй /start.", reply_markup=keyboard)
@@ -345,23 +342,6 @@ async def echo_handler(message: types.Message) -> None:
     except TypeError:
         await message.answer("Не могу это скопировать! 😅", reply_markup=create_keyboard())
 
-# --- Flask app ---
-app = Flask(__name__)
-
-@app.route("/")
-def health_check():
-    return "OK", 200
-
-@app.post("/webhook")
-async def bot_webhook():
-    """Обрабатывает входящие запросы от Telegram (aiogram)."""
-    logger.info("Получен запрос на /webhook")  # Добавьте эту строку
-    json_data = request.get_data().decode('utf-8')
-    update = types.Update.model_validate_json(json_data)
-    await dp.process_update(update)  # Передаем update в диспетчер aiogram
-    return "OK", 200
-
-
 # --- Main function ---
 async def main():
     # Инициализируем базу данных (если еще не инициализирована)
@@ -369,27 +349,11 @@ async def main():
     # Инициализируем планировщик, передавая ему экземпляр бота
     scheduler.init_scheduler(bot)
 
-    # Get port from environment or use default
-    port = int(os.environ.get("PORT", 8000))
-    #webhook_url = os.environ.get("WEBHOOK_URL")
-    #webhook_path = "/webhook"
-    # Запускаем поллинг бота
-    #await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Бот запущен! 🚀")
-    #try:
-        #await bot.set_webhook(f"{webhook_url}{webhook_path}")
-        #logger.info("Webhook set successfully")
-    #except Exception as e:
-        #logger.error(f"Error setting webhook: {e}")
 
-    # Run tasks concurrently
-    try:
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(dp.start_polling(bot))
-            #Here we tell the Flask application to start.
-            tg.create_task(app.run(host="0.0.0.0", port=port)) # type: ignore
-    except Exception as e:
-        logger.error(f"Error in main loop: {e}")
+    # Запускаем поллинг бота
+    await bot.delete_webhook(drop_pending_updates=True) #  Удаляем вебхук, если он был установлен
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     try:

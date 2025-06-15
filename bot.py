@@ -58,7 +58,7 @@ async def command_start_handler(message: types.Message, state: FSMContext) -> No
     """Обрабатывает команду /start."""
     logger.info(f"Получена команда /start от пользователя {message.chat.id}")  # <--- ЛОГИРОВАНИЕ
     try:
-        user = db.get_user(message.chat.id)
+        user = await db.get_user(message.chat.id)
         keyboard = create_keyboard()  # Создаем клавиатуру
 
         if user:
@@ -152,7 +152,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
             group = user_data['group']
 
             # Сохраняем пользователя в БД (только при регистрации)
-            success = db.add_user(chat_id, message.from_user.username, name, surname, group, time_str)
+            success = await db.add_user(chat_id, message.from_user.username, name, surname, group, time_str)
 
             if success:
                 # Регистрация успешна
@@ -169,7 +169,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
 
         else:
             # Это изменение времени
-            user = db.get_user(chat_id)
+            user = await db.get_user(chat_id)
             if not user:
                 await message.answer("Ты не зарегистрирован! Пожалуйста, используй /start для регистрации.", reply_markup=create_keyboard())
                 await state.clear()
@@ -180,7 +180,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
             group = user[4]
 
             # Обновляем время в базе данных (только при изменении времени)
-            db.update_user_time(chat_id, time_str)
+            await db.update_user_time(chat_id, time_str)
             logger.info(f"Пользователь {chat_id} изменил время рассылки на {time_str}")
             await message.answer(f"Отлично! ✅ Теперь расписание будет приходить в {time_str} ⏰", reply_markup=create_keyboard())
 
@@ -192,7 +192,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
 async def show_my_info(message: types.Message):
     """Показывает информацию о зарегистрированном пользователе."""
     try:
-        user = db.get_user(message.chat.id)
+        user = await db.get_user(message.chat.id)
         keyboard = create_keyboard()
 
         if user:
@@ -213,7 +213,7 @@ async def show_my_info(message: types.Message):
 async def get_schedule_now(message: types.Message):
     """Отправляет расписание для пользователя прямо сейчас."""
     try:
-        user = db.get_user(message.chat.id)
+        user = await db.get_user(message.chat.id)
         keyboard = create_keyboard()
 
         if user:
@@ -247,21 +247,24 @@ async def delete_profile(message: types.Message):
 # Обработчик нажатий на кнопки подтверждения/отмены
 @dp.callback_query(F.data.in_({"confirm_delete", "cancel_delete"}))
 async def delete_confirmation(callback: types.CallbackQuery, state: FSMContext):
-    user_id = callback.message.chat.id
-    keyboard = create_keyboard()
+    try:
+        user_id = callback.message.chat.id
+        keyboard = create_keyboard()
 
-    if callback.data == "confirm_delete":
-        # Удаляем пользователя из базы данных
-        db.delete_user(user_id)
-        logger.info(f"Пользователь {user_id} удалил свой профиль.")
+        if callback.data == "confirm_delete":
+            # Удаляем пользователя из базы данных
+            await db.delete_user(user_id)
+            logger.info(f"Пользователь {user_id} удалил свой профиль.")
 
-        await callback.message.edit_text("Твой профиль успешно удален! 👋 Больше я тебя не знаю 🤖. Чтобы начать заново, используй /start")
-        await state.clear()  # Сбрасываем состояние FSM (если оно было)
-    else:
-        # Отмена удаления
-        await callback.message.edit_text("Удаление отменено. 😎 Твой профиль в безопасности!")
+            await callback.message.edit_text("Твой профиль успешно удален! 👋 Больше я тебя не знаю 🤖. Чтобы начать заново, используй /start")
+            await state.clear()  # Сбрасываем состояние FSM (если оно было)
+        else:
+            # Отмена удаления
+            await callback.message.edit_text("Удаление отменено. 😎 Твой профиль в безопасности!")
 
-    await callback.answer()  # Обязательно отвечаем на callback query, чтобы убрать "часики"
+        await callback.answer()  # Обязательно отвечаем на callback query, чтобы убрать "часики"
+    except Exception as e:
+        logger.exception(f"Ошибка в delete_confirmation: {e}")
 
 # --- ХЕНДЛЕРЫ ДЛЯ КНОПОК ---
 @dp.message(F.text == "Регистрация 📝")
@@ -277,7 +280,7 @@ async def registration_handler(message: types.Message, state: FSMContext):
 async def all_schedule_handler(message: types.Message):
     """Обрабатывает нажатие на кнопку "Все расписание"."""
     try:
-        user = db.get_user(message.chat.id)
+        user = await db.get_user(message.chat.id)
         keyboard = create_keyboard()
 
         if user:
@@ -294,7 +297,7 @@ async def all_schedule_handler(message: types.Message):
 async def today_schedule_handler(message: types.Message):
     """Обрабатывает нажатие на кнопку "Расписание на сегодня"."""
     try:
-        user = db.get_user(message.chat.id)
+        user = await db.get_user(message.chat.id)
         keyboard = create_keyboard()
 
         if user:
@@ -338,7 +341,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
             group = user_data['group']
 
             # Сохраняем пользователя в БД (только при регистрации)
-            success = db.add_user(chat_id, message.from_user.username, name, surname, group, time_str)
+            success = await db.add_user(chat_id, message.from_user.username, name, surname, group, time_str)
 
             if success:
                 # Регистрация успешна
@@ -346,7 +349,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
                     f"Ура! 🥳 Регистрация завершена!\n"
                     f"Привет, {name} {surname} из группы {group}! ✨\n"
                     f"Теперь я буду присылать тебе расписание каждый день в {time_str} ⏰\n"
-                    f"Будь на связи! 😉", reply_markup=create_keyboard()
+                    f"Будь на связи! 😉", reply_markup=keyboard
                 )
                 logger.info(f"Регистрация пользователя {chat_id} успешно завершена.")
             else:
@@ -355,7 +358,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
 
         else:
             # Это изменение времени
-            user = db.get_user(chat_id)
+            user = await db.get_user(chat_id)
             if not user:
                 await message.answer("Ты не зарегистрирован! Пожалуйста, используй /start для регистрации.", reply_markup=create_keyboard())
                 await state.clear()
@@ -366,7 +369,7 @@ async def reg_schedule_time(message: types.Message, state: FSMContext):
             group = user[4]
 
             # Обновляем время в базе данных (только при изменении времени)
-            db.update_user_time(chat_id, time_str)
+            await db.update_user_time(chat_id, time_str)
             logger.info(f"Пользователь {chat_id} изменил время рассылки на {time_str}")
             await message.answer(f"Отлично! ✅ Теперь расписание будет приходить в {time_str} ⏰", reply_markup=create_keyboard())
 
@@ -387,7 +390,7 @@ async def echo_handler(message: types.Message) -> None:
 # --- Main function ---
 async def main():
     # Инициализируем базу данных (если еще не инициализирована)
-    db.init_db()
+    await db.init_db()
     # Инициализируем планировщик, передавая ему экземпляр бота
     scheduler.init_scheduler(bot)
 
